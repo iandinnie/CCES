@@ -1,0 +1,139 @@
+---
+title: "CCES Analysis"
+output: html_document
+date: '2022-12-06'
+---
+Import and clean up the data
+```{r setup}
+library(tidyverse)
+library(knitr)
+knitr::opts_chunk$set(echo = TRUE,
+                      fig.asp = 0.618)
+library(haven)
+CCES14_AGT_OUTPUT_Feb2015_unmatched <- as_tibble(
+  read_sav("./Data/CCES14_AGT_OUTPUT_Feb2015_unmatched.sav")
+  )
+
+# Some basic data cleaning
+unmatched_2014 <- CCES14_AGT_OUTPUT_Feb2015_unmatched %>% 
+  filter(!is.na(AGT_Marijuana_Prime),
+         !is.na(marijuana_treat),
+         is.na(AGT301)) %>% 
+  select(AGT_Weed, V101, AGT301, marijuana_treat, AGT_Marijuana_Prime, pid7, pid3, AGT_weedrand, educ) %>% 
+  mutate(Elite_Cue = case_when(
+    marijuana_treat == 1 ~ "Dem Negative",
+    marijuana_treat == 2 ~ "Rep Negative",
+    marijuana_treat == 3 ~ "Dem Positive", 
+    marijuana_treat == 4 ~ "Rep Positive",
+    marijuana_treat == 5 ~ "Control" 
+  ),
+  Party_Detail = as.factor(case_when(
+    pid7 == 1 ~ "Strong Democrat",
+    pid7 == 2 ~ "Not Strong Democrat",
+    pid7 == 3 ~ "Lean Democrat",
+    pid7 == 4 ~ "Independent",
+    pid7 == 5 ~ "Lean Republican",
+    pid7 == 6 ~ "Not Strong Republican",
+    pid7 == 7 ~ "Strong Republican",
+    pid7 == 8 ~ "Not Sure",
+    pid7 == 98 ~ "Skipped",
+    pid7 == 99 ~ "Not Asked"
+  )),
+  Party = as.factor(case_when(
+    pid3 == 1 | pid7 == 3 & pid3 == 3 ~ "Democrat",
+    pid3 == 2 | pid7 == 5 & pid3 == 3 ~ "Republican",
+    pid3 == 3 & pid7 == 4 ~ "Independent",
+    pid3 == 4 ~ "Other",
+    pid3 == 5 ~ "Not Sure",
+    pid3 == 8 ~ "Skipped",
+    pid3 == 9 ~ "Not Asked"
+  )),
+  Ideological_Cue = as.factor(case_when(
+    AGT_weedrand == 1 ~ "Society",
+    AGT_weedrand == 2 ~ "Paternalistic",
+    AGT_weedrand == 3 ~ "Control",
+    AGT_weedrand == 8 ~ "Skipped",
+    AGT_weedrand == 9 ~ "Not Asked"
+  )),
+  Education = as.factor(case_when(
+     educ == 1 | educ == 2 | educ == 3 | educ == 4 ~"Less than BA",
+     educ == 5 | educ == 6 ~ "BA or Higher"
+  )))
+
+```
+
+
+find average support for marijuana legalization and create some confidence intervals
+```{r}
+#means
+a = 0.05 # significance level
+
+means <- map(c("Ideological_Cue", "Elite_Cue"), function(x){
+  cols2group <- c("Party", x)
+  
+  # calculate average support for marijuana legalization by political party and elite cue
+  unmatched_2014 %>% 
+  group_by(across(all_of(cols2group)))%>% 
+  summarise(Avg = mean(AGT_Weed, na.rm = T),
+            n = n(),
+            sd = sd(AGT_Weed, na.rm = T),
+            se = sd / sqrt(n),
+            lower = Avg - qnorm(1 - a / 2)*se,
+            upper = Avg + qnorm(1 - a / 2)*se)
+})
+
+names(means) <- c("Ideological_Cue", "Elite_Cue")
+
+```
+
+Create a plot displaying average support for marijuana legalization by partisan cue political ideology. This plot suggests Democrats and Republicans differ on levels of support for marijuana legalization, but that their levels of support are largely unaffected by partisan cues, whether they be in-party or out-party cues 
+```{r}
+#plots
+# elite cues
+eliteplot <- means[["Elite_Cue"]] %>% 
+  filter(Party == "Democrat" | Party == "Republican" | Party == "Independent") %>% 
+  mutate(Avg_for_label = round(Avg,2)) %>% 
+  ggplot(aes(Elite_Cue,Avg))+
+  geom_errorbar(aes(ymin = lower, ymax = upper))+
+  geom_point(size = 12, shape=21, fill="White", color = "White")+
+  theme_minimal()+
+  facet_wrap(vars(Party))+
+  theme(axis.text.x = element_text(angle = 45, vjust = 0.5),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.line = element_line(colour = "black"))+
+  geom_text(aes(label=Avg_for_label))+
+  labs(title = "Elite Cue",
+       y = "",
+       x = "")
+
+eliteplot
+```
+
+Display plot for average support for marijuana legalization by ideological cue and party. This suggests that like the above plot, Republicans and Democrats are largely unswayed by ideological cues when it comes to support for marijuana legalization. 
+```{r}
+ideoplot <- means[["Ideological_Cue"]]%>% 
+  filter(Party == "Democrat" | Party == "Republican" | Party == "Independent") %>% 
+  mutate(Avg_for_label = round(Avg,2)) %>% 
+  ggplot(aes(Ideological_Cue,Avg))+
+  geom_errorbar(aes(ymin = lower, ymax = upper), width = 0.5)+
+  geom_point(size = 12, shape = 21, fill = "White", color = "White")+
+  theme_minimal()+
+  facet_wrap(vars(Party))+
+  theme(axis.text.x = element_text(angle = 45, vjust = 0.5),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.line = element_line(colour = "black"))+
+  geom_text(aes(label=Avg_for_label))+
+  labs(title = "Ideological Prime - 2014",
+       y = "",
+       x = "")
+ideoplot
+```
+
+The repository for this project can be cloned from this GitHub link:
+https://github.com/iandinnie/CCES.git
+
+
+
+
