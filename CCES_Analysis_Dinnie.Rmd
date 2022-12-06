@@ -5,11 +5,18 @@ date: '2022-12-06'
 ---
 Import and clean up the data
 ```{r setup}
-library(tidyverse)
-library(knitr)
+
+# make sure necessary packages are installed
+if (!require(tidyverse)) install.packages('tidyverse')
+if (!require(knitr)) install.packages('knitr')
 knitr::opts_chunk$set(echo = TRUE,
                       fig.asp = 0.618)
+if (!require(haven)) install.packages('haven')
+
+library(tidyverse)
+library(knitr)
 library(haven)
+
 CCES14_AGT_OUTPUT_Feb2015_unmatched <- as_tibble(
   read_sav("./Data/CCES14_AGT_OUTPUT_Feb2015_unmatched.sav")
   )
@@ -65,10 +72,11 @@ unmatched_2014 <- CCES14_AGT_OUTPUT_Feb2015_unmatched %>%
 
 find average support for marijuana legalization and create some confidence intervals
 ```{r}
-#means
-a = 0.05 # significance level
+# significance level
+a = 0.05 
 
 means <- map(c("Ideological_Cue", "Elite_Cue"), function(x){
+  # character vector of variables to pass to group_by()
   cols2group <- c("Party", x)
   
   # calculate average support for marijuana legalization by political party and elite cue
@@ -79,7 +87,8 @@ means <- map(c("Ideological_Cue", "Elite_Cue"), function(x){
             sd = sd(AGT_Weed, na.rm = T),
             se = sd / sqrt(n),
             lower = Avg - qnorm(1 - a / 2)*se,
-            upper = Avg + qnorm(1 - a / 2)*se)
+            upper = Avg + qnorm(1 - a / 2)*se) %>% 
+    ungroup()
 })
 
 names(means) <- c("Ideological_Cue", "Elite_Cue")
