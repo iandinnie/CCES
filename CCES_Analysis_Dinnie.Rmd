@@ -4,7 +4,7 @@ output: html_document
 date: '2022-12-06'
 ---
 Import and clean up the data
-```{r setup}
+```{r echo = F, warn = F, message = F, include = F}
 
 # make sure necessary packages are installed
 if (!require(tidyverse)) install.packages('tidyverse')
@@ -71,7 +71,7 @@ unmatched_2014 <- CCES14_AGT_OUTPUT_Feb2015_unmatched %>%
 
 
 find average support for marijuana legalization and create some confidence intervals
-```{r}
+```{r echo = F, message = F}
 # significance level
 a = 0.05 
 
@@ -96,7 +96,7 @@ names(means) <- c("Ideological_Cue", "Elite_Cue")
 ```
 
 Create a plot displaying average support for marijuana legalization by partisan cue political ideology. This plot suggests Democrats and Republicans differ on levels of support for marijuana legalization, but that their levels of support are largely unaffected by partisan cues, whether they be in-party or out-party cues 
-```{r}
+```{r echo = F}
 #plots
 # elite cues
 eliteplot <- means[["Elite_Cue"]] %>% 
@@ -120,7 +120,7 @@ eliteplot
 ```
 
 Display plot for average support for marijuana legalization by ideological cue and party. This suggests that like the above plot, Republicans and Democrats are largely unswayed by ideological cues when it comes to support for marijuana legalization. 
-```{r}
+```{r echo = F}
 ideoplot <- means[["Ideological_Cue"]]%>% 
   filter(Party == "Democrat" | Party == "Republican" | Party == "Independent") %>% 
   mutate(Avg_for_label = round(Avg,2)) %>% 
